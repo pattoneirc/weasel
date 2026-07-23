@@ -145,6 +145,14 @@ jobs:
             .\xbuild.bat arm64 installer
           }
 
+      - name: Run unit tests
+        if: matrix.variant == 'msbuild'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          msbuild -m -t:Build -p:Configuration=Release -p:Platform=x64 .\test\TestResponseParser\TestResponseParser.vcxproj
+          & .\msbuild\Release\x64\TestResponseParser.exe
+
       - name: Compress Debug Symbols
         if: matrix.variant == 'msbuild'
         shell: pwsh

@@ -1,34 +1,33 @@
 ﻿#pragma once
+#include <chrono>
+#include <ctime>
 #include <filesystem>
-#include <string>
+#include <iomanip>
 #include <sstream>
+#include <string>
+#include <vector>
 #include <wrl/client.h>
 using namespace Microsoft::WRL;
 
 namespace fs = std::filesystem;
 
 inline int utf8towcslen(const char* utf8_str, int utf8_len) {
-  return MultiByteToWideChar(CP_UTF8, 0, utf8_str, utf8_len, NULL, 0);
+  return MultiByteToWideChar(CP_UTF8, 0, utf8_str, utf8_len, nullptr, 0);
 }
 
 inline std::wstring getUsername() {
   DWORD len = 0;
-  GetUserName(NULL, &len);
+  GetUserNameW(nullptr, &len);
+  if (len == 0)
+    return {};
 
-  if (len <= 0) {
-    return L"";
-  }
+  std::wstring username(len, L'\0');
+  if (!GetUserNameW(username.data(), &len) || len == 0)
+    return {};
 
-  wchar_t* username = new wchar_t[len + 1];
-
-  GetUserName(username, &len);
-  if (len <= 0) {
-    delete[] username;
-    return L"";
-  }
-  auto res = std::wstring(username);
-  delete[] username;
-  return res;
+  // GetUserNameW reports a length that includes the trailing null character.
+  username.resize(len - 1);
+  return username;
 }
 
 // data directories
@@ -64,39 +63,45 @@ inline BOOL IsUserDarkMode() {
 inline std::wstring string_to_wstring(const std::string& str,
                                       int code_page = CP_ACP) {
   // support CP_ACP and CP_UTF8 only
-  if (code_page != 0 && code_page != CP_UTF8)
-    return L"";
-  // calc len
-  int len =
-      MultiByteToWideChar(code_page, 0, str.c_str(), (int)str.size(), NULL, 0);
+  if (code_page != CP_ACP && code_page != CP_UTF8)
+    return {};
+  if (str.empty())
+    return {};
+
+  int len = MultiByteToWideChar(code_page, 0, str.data(),
+                                static_cast<int>(str.size()), nullptr, 0);
   if (len <= 0)
-    return L"";
-  std::wstring res;
-  TCHAR* buffer = new TCHAR[len + 1];
-  MultiByteToWideChar(code_page, 0, str.c_str(), (int)str.size(), buffer, len);
-  buffer[len] = '\0';
-  res.append(buffer);
-  delete[] buffer;
-  return res;
+    return {};
+
+  std::wstring result(static_cast<size_t>(len), L'\0');
+  if (MultiByteToWideChar(code_page, 0, str.data(),
+                          static_cast<int>(str.size()), result.data(), len) !=
+      len) {
+    return {};
+  }
+  return result;
 }
 
 inline std::string wstring_to_string(const std::wstring& wstr,
                                      int code_page = CP_ACP) {
   // support CP_ACP and CP_UTF8 only
-  if (code_page != 0 && code_page != CP_UTF8)
-    return "";
-  int len = WideCharToMultiByte(code_page, 0, wstr.c_str(), (int)wstr.size(),
-                                NULL, 0, NULL, NULL);
+  if (code_page != CP_ACP && code_page != CP_UTF8)
+    return {};
+  if (wstr.empty())
+    return {};
+  int len = WideCharToMultiByte(code_page, 0, wstr.data(),
+                                static_cast<int>(wstr.size()), nullptr, 0,
+                                nullptr, nullptr);
   if (len <= 0)
-    return "";
-  std::string res;
-  char* buffer = new char[len + 1];
-  WideCharToMultiByte(code_page, 0, wstr.c_str(), (int)wstr.size(), buffer, len,
-                      NULL, NULL);
-  buffer[len] = '\0';
-  res.append(buffer);
-  delete[] buffer;
-  return res;
+    return {};
+
+  std::string result(static_cast<size_t>(len), '\0');
+  if (WideCharToMultiByte(code_page, 0, wstr.data(),
+                          static_cast<int>(wstr.size()), result.data(), len,
+                          nullptr, nullptr) != len) {
+    return {};
+  }
+  return result;
 }
 
 inline BOOL is_wow64() {
@@ -120,26 +125,26 @@ struct EscapeChar {
 };
 
 template <>
-const char EscapeChar<char>::escape = '\\';
+inline const char EscapeChar<char>::escape = '\\';
 template <>
-const char EscapeChar<char>::linefeed = '\n';
+inline const char EscapeChar<char>::linefeed = '\n';
 template <>
-const char EscapeChar<char>::tab = '\t';
+inline const char EscapeChar<char>::tab = '\t';
 template <>
-const char EscapeChar<char>::linefeed_escape = 'n';
+inline const char EscapeChar<char>::linefeed_escape = 'n';
 template <>
-const char EscapeChar<char>::tab_escape = 't';
+inline const char EscapeChar<char>::tab_escape = 't';
 
 template <>
-const wchar_t EscapeChar<wchar_t>::escape = L'\\';
+inline const wchar_t EscapeChar<wchar_t>::escape = L'\\';
 template <>
-const wchar_t EscapeChar<wchar_t>::linefeed = L'\n';
+inline const wchar_t EscapeChar<wchar_t>::linefeed = L'\n';
 template <>
-const wchar_t EscapeChar<wchar_t>::tab = L'\t';
+inline const wchar_t EscapeChar<wchar_t>::tab = L'\t';
 template <>
-const wchar_t EscapeChar<wchar_t>::linefeed_escape = L'n';
+inline const wchar_t EscapeChar<wchar_t>::linefeed_escape = L'n';
 template <>
-const wchar_t EscapeChar<wchar_t>::tab_escape = L't';
+inline const wchar_t EscapeChar<wchar_t>::tab_escape = L't';
 
 template <typename CharT>
 inline std::basic_string<CharT> escape_string(
@@ -204,11 +209,11 @@ inline LONG RegGetStringValue(HKEY key,
                               LPCWSTR lpSubKey,
                               LPCWSTR lpValue,
                               std::wstring& value) {
-  TCHAR szValue[MAX_PATH];
-  DWORD dwBufLen = MAX_PATH;
+  wchar_t szValue[MAX_PATH]{};
+  DWORD dwBufLen = sizeof(szValue);
 
-  LONG lRes = RegGetValue(key, lpSubKey, lpValue, RRF_RT_REG_SZ, NULL, szValue,
-                          &dwBufLen);
+  LONG lRes = RegGetValueW(key, lpSubKey, lpValue, RRF_RT_REG_SZ, nullptr,
+                           szValue, &dwBufLen);
   if (lRes == ERROR_SUCCESS) {
     value = std::wstring(szValue);
   }
@@ -249,7 +254,7 @@ inline LANGID get_language_id() {
 class DebugStream {
  public:
   DebugStream() = default;
-  ~DebugStream() { OutputDebugString(ss.str().c_str()); }
+  ~DebugStream() { OutputDebugStringW(ss.str().c_str()); }
   template <typename T>
   DebugStream& operator<<(const T& value) {
     ss << value;
@@ -262,8 +267,8 @@ class DebugStream {
     }
     return *this;
   }
-  DebugStream& operator<<(const std::string value) {
-    std::wstring wvalue(acptow(value));  // utf-8
+  DebugStream& operator<<(const std::string& value) {
+    std::wstring wvalue(u8tow(value));  // utf-8
     ss << wvalue;
     return *this;
   }

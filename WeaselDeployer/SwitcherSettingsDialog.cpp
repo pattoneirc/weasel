@@ -3,6 +3,7 @@
 #include "Configurator.h"
 #include <algorithm>
 #include <set>
+#include <vector>
 #include <rime_levers_api.h>
 #include <WeaselUtility.h>
 #include "WeaselDeployer.h"
@@ -158,26 +159,25 @@ LRESULT SwitcherSettingsDialog::OnGetSchemata(WORD, WORD, HWND hWndCtl, BOOL&) {
 
 LRESULT SwitcherSettingsDialog::OnOK(WORD, WORD code, HWND, BOOL&) {
   if (modified_ && settings_ && schema_list_.GetItemCount() != 0) {
-    const char** selection = new const char*[schema_list_.GetItemCount()];
-    int count = 0;
+    std::vector<const char*> selection;
+    selection.reserve(schema_list_.GetItemCount());
     for (int i = 0; i < schema_list_.GetItemCount(); ++i) {
       if (!schema_list_.GetCheckState(i))
         continue;
       RimeSchemaInfo* info = (RimeSchemaInfo*)(schema_list_.GetItemData(i));
       if (info) {
-        selection[count++] = api_->get_schema_id(info);
+        selection.push_back(api_->get_schema_id(info));
       }
     }
-    if (count == 0) {
+    if (selection.empty()) {
       // MessageBox(_T("至少要選用一項吧。"), _T("小狼毫不是這般用法"), MB_OK |
       // MB_ICONEXCLAMATION);
       MSG_BY_IDS(IDS_STR_ERR_AT_LEAST_ONE_SEL, IDS_STR_NOT_REGULAR,
                  MB_OK | MB_ICONEXCLAMATION);
-      delete selection;
       return 0;
     }
-    api_->select_schemas(settings_, selection, count);
-    delete selection;
+    api_->select_schemas(settings_, selection.data(),
+                         static_cast<int>(selection.size()));
   }
   EndDialog(code);
   return 0;

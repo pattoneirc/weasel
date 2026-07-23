@@ -1,0 +1,23 @@
+root = true
+
+[*]
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cpp,h,hpp,c,cc}]
+charset = utf-8
+end_of_line = crlf
+indent_style = space
+indent_size = 2
+
+# Windows resource compiler files intentionally remain UTF-16LE with BOM.
+[*.{rc,rc2}]
+charset = utf-16le
+indent_style = space
+indent_size = 2
+
+[*.{json,lua,md,ps1,yaml,yml}]
+charset = utf-8
+
+[*.{bat,cmd,vcxproj,sln,props,targets}]
+end_of_line = crlf

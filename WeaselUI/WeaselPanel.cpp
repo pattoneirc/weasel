@@ -6,6 +6,7 @@
 #include <VersionHelpers.hpp>
 #include <WeaselIPCData.h>
 #include <algorithm>
+#include <vector>
 
 #include "VerticalLayout.h"
 #include "HorizontalLayout.h"
@@ -135,7 +136,8 @@ void WeaselPanel::_CreateLayout() {
 void WeaselPanel::Refresh() {
   bool should_show_icon =
       (m_status.ascii_mode || !m_status.composing || !m_ctx.aux.empty());
-  m_candidateCount = min(m_ctx.cinfo.candies.size(), MAX_CANDIDATES_COUNT);
+  m_candidateCount = static_cast<BYTE>((std::min)(
+      m_ctx.cinfo.candies.size(), static_cast<size_t>(MAX_CANDIDATES_COUNT)));
   // When the candidate window changes from having content to having no content,
   // reset the sticky state
   if (m_lastCandidateCount > 0 && m_candidateCount == 0) {
@@ -1000,18 +1002,20 @@ void WeaselPanel::DoPaint(CDCHandle dc) {
     CRect auxrc = m_layout->GetAuxiliaryRect();
     CRect preeditrc = m_layout->GetPreeditRect();
     if (m_istorepos) {
-      CRect* rects = new CRect[m_candidateCount];
-      int* btmys = new int[m_candidateCount];
-      for (auto i = 0; i < m_candidateCount && i < MAX_CANDIDATES_COUNT; ++i) {
+      const int candidate_count =
+          (std::min)(static_cast<int>(m_candidateCount), MAX_CANDIDATES_COUNT);
+      std::vector<CRect> rects(candidate_count);
+      std::vector<int> btmys(candidate_count);
+      for (int i = 0; i < candidate_count; ++i) {
         rects[i] = m_layout->GetCandidateRect(i);
         btmys[i] = rects[i].bottom;
       }
-      if (m_candidateCount) {
+      if (candidate_count > 0) {
         if (!m_layout->IsInlinePreedit() && !m_ctx.preedit.str.empty())
           m_offsety_preedit =
-              rects[m_candidateCount - 1].bottom - preeditrc.bottom;
+              rects[candidate_count - 1].bottom - preeditrc.bottom;
         if (!m_ctx.aux.str.empty())
-          m_offsety_aux = rects[m_candidateCount - 1].bottom - auxrc.bottom;
+          m_offsety_aux = rects[candidate_count - 1].bottom - auxrc.bottom;
       } else {
         m_offsety_preedit = 0;
         m_offsety_aux = 0;
@@ -1022,17 +1026,15 @@ void WeaselPanel::DoPaint(CDCHandle dc) {
       else if (!m_layout->IsInlinePreedit() && !m_ctx.preedit.str.empty())
         base_gap = preeditrc.Height() + m_style.spacing;
 
-      for (auto i = 0; i < m_candidateCount && i < MAX_CANDIDATES_COUNT; ++i) {
+      for (int i = 0; i < candidate_count; ++i) {
         if (i == 0)
           m_offsetys[i] =
-              btmys[m_candidateCount - i - 1] - base_gap - rects[i].bottom;
+              btmys[candidate_count - i - 1] - base_gap - rects[i].bottom;
         else
           m_offsetys[i] = (rects[i - 1].top + m_offsetys[i - 1] -
                            DPI_SCALE(m_style.candidate_spacing)) -
                           rects[i].bottom;
       }
-      delete[] rects;
-      delete[] btmys;
     }
     // background and candidates back, hilite back drawing start
     if ((!m_ctx.empty() && !m_style.inline_preedit) ||
