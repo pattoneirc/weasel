@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [string] $RimeDir = (Join-Path ([Environment]::GetFolderPath('ApplicationData')) 'Rime'),
   [string] $BackupBase = (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'RimeBackups\AI_Rime_Dictionary_Project'),

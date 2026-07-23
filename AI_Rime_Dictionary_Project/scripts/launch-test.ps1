@@ -1,17 +1,18 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [Parameter(Mandatory)]
   [ValidateSet('Install', 'Restore')]
   [string] $Action,
   [string] $PackageRoot = (Split-Path $PSScriptRoot -Parent),
   [string] $RimeDir = (Join-Path ([Environment]::GetFolderPath('ApplicationData')) 'Rime'),
-  [string] $BackupBase = (Join-Path $PackageRoot '_backups'),
+  [string] $BackupBase = (Join-Path $PackageRoot '_local_test_backup'),
   [switch] $SkipDeploy,
   [switch] $NonInteractive
 )
 
 $ErrorActionPreference = 'Stop'
-$PackageRoot = [IO.Path]::GetFullPath($PackageRoot)
+$PackageRoot = [IO.Path]::GetFullPath($PackageRoot.Trim().Trim('"'))
+$BackupBase = [IO.Path]::GetFullPath($BackupBase.Trim().Trim('"'))
 $logName = if ($Action -eq 'Install') { 'install-test.log' } else { 'restore-test.log' }
 $logPath = Join-Path $PackageRoot $logName
 
@@ -51,15 +52,15 @@ try {
   if (-not (Test-Path -LiteralPath $installScript) -or
       -not (Test-Path -LiteralPath $uninstallScript) -or
       -not (Test-Path -LiteralPath $englishDictionary)) {
-    throw 'The test package is incomplete. Extract the entire ZIP to a normal folder before running it.'
+    throw 'The project test files are incomplete. Run the launcher from AI_Rime_Dictionary_Project.'
   }
 
   if ($Action -eq 'Install') {
     $question = @'
 这会临时修改当前用户的 Rime 配置，但不会替换小狼毫程序文件。
 
-原配置将备份到测试包旁边的 _backups 文件夹。
-测试期间请保留整个测试包文件夹。
+原配置将临时备份到项目目录的 _local_test_backup 文件夹。
+点击“恢复原配置”成功后，这个临时备份会自动删除。
 
 是否继续？
 '@
@@ -72,8 +73,10 @@ try {
       BackupBase = $BackupBase
       SkipDeploy = $SkipDeploy
     }
-    $output = & $installScript @params 2>&1 | Out-String
-    [IO.File]::WriteAllText($logPath, $output, (New-Object Text.UTF8Encoding($true)))
+    & $installScript @params 2>&1 | Out-Null
+    if (Test-Path -LiteralPath $logPath) {
+      Remove-Item -LiteralPath $logPath -Force
+    }
     Show-Dialog -Title '安装完成' -Text @'
 测试配置已安装。
 
@@ -92,10 +95,17 @@ try {
 
     $params = @{
       RimeDir = $RimeDir
+      BackupBase = $BackupBase
       SkipDeploy = $SkipDeploy
+      RemoveBackup = $true
     }
-    $output = & $uninstallScript @params 2>&1 | Out-String
-    [IO.File]::WriteAllText($logPath, $output, (New-Object Text.UTF8Encoding($true)))
+    & $uninstallScript @params 2>&1 | Out-Null
+    foreach ($oldLog in @('install-test.log', 'restore-test.log')) {
+      $oldLogPath = Join-Path $PackageRoot $oldLog
+      if (Test-Path -LiteralPath $oldLogPath) {
+        Remove-Item -LiteralPath $oldLogPath -Force
+      }
+    }
     Show-Dialog -Title '恢复完成' -Text '原配置已恢复。测试词库已经移除。' | Out-Null
   }
 

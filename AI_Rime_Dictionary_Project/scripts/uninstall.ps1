@@ -1,7 +1,9 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [string] $RimeDir = (Join-Path ([Environment]::GetFolderPath('ApplicationData')) 'Rime'),
-  [switch] $SkipDeploy
+  [string] $BackupBase,
+  [switch] $SkipDeploy,
+  [switch] $RemoveBackup
 )
 
 $ErrorActionPreference = 'Stop'
@@ -63,6 +65,29 @@ if (-not $SkipDeploy) {
     & $deployer /deploy
   } else {
     Write-Warning 'WeaselDeployer.exe was not found. Use the tray menu to apply/redeploy the configuration manually.'
+  }
+}
+
+if ($RemoveBackup) {
+  if ([string]::IsNullOrWhiteSpace($BackupBase)) {
+    throw 'BackupBase is required when RemoveBackup is enabled.'
+  }
+  $trimChars = [char[]]@(
+    [IO.Path]::DirectorySeparatorChar,
+    [IO.Path]::AltDirectorySeparatorChar
+  )
+  $resolvedBase = [IO.Path]::GetFullPath($BackupBase).TrimEnd($trimChars)
+  $resolvedBackup = [IO.Path]::GetFullPath($backupRoot)
+  if (-not $resolvedBackup.StartsWith(
+      $resolvedBase + [IO.Path]::DirectorySeparatorChar,
+      [StringComparison]::OrdinalIgnoreCase
+    )) {
+    throw "Refusing to remove backup outside BackupBase: $resolvedBackup"
+  }
+  Remove-Item -LiteralPath $resolvedBackup -Recurse -Force
+  if ((Test-Path -LiteralPath $resolvedBase) -and
+      -not (Get-ChildItem -LiteralPath $resolvedBase -Force | Select-Object -First 1)) {
+    Remove-Item -LiteralPath $resolvedBase -Force
   }
 }
 
