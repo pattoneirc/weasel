@@ -18,6 +18,9 @@ AI_Rime_Dictionary_Project/
 ├── README.md
 ├── installation.md
 ├── test_cases.md
+├── 测试包说明.md
+├── 测试安装配置.cmd
+├── 恢复原配置.cmd
 ├── custom_phrase.txt
 ├── ai_creator.dict.yaml
 ├── ai_creator.schema.yaml
@@ -67,3 +70,5 @@ Set-ExecutionPolicy -Scope Process Bypass
 ```
 
 安装脚本会复制词库、备份并更新 `luna_pinyin_simp.custom.yaml`，随后调用小狼毫部署工具。完整说明见 [installation.md](installation.md)。
+
+从测试压缩包使用时，推荐解压到 D 盘后双击 `测试安装配置.cmd`。测试完成后双击 `恢复原配置.cmd`，原配置会从测试包旁边的 `_backups` 恢复。

@@ -10,6 +10,10 @@ $projectRoot = Split-Path $PSScriptRoot -Parent
 $manifestPath = Join-Path $RimeDir '.ai_creator_install.json'
 $utf8 = New-Object Text.UTF8Encoding($false)
 
+if (Test-Path $manifestPath) {
+  throw 'AI creator test configuration is already installed. Run uninstall.ps1 (or double-click 恢复原配置.cmd) before installing again.'
+}
+
 $files = @(
   'ai_creator.dict.yaml',
   'ai_creator.schema.yaml',
