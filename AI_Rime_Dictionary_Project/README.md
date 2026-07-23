@@ -37,6 +37,8 @@ AI_Rime_Dictionary_Project/
 ├── english_terms.dict.yaml
 ├── luna_pinyin_simp.custom.template.yaml
 └── scripts/
+    ├── launch-test.ps1
+    ├── build-test-package.ps1
     ├── install.ps1
     └── uninstall.ps1
 ```

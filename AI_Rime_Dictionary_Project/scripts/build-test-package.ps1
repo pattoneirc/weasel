@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string] $Version = '1.1.0',
+  [string] $Version = '1.1.1',
   [string] $OutputDir = (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'output\archives')
 )
 
@@ -29,6 +29,22 @@ New-Item -ItemType Directory -Path $stageDir | Out-Null
 Get-ChildItem -LiteralPath $projectRoot -Force |
   Where-Object { $_.Name -notin @('_backups', '.ai_creator_install.json') } |
   Copy-Item -Destination $stageDir -Recurse -Force
+
+$utf8Bom = New-Object Text.UTF8Encoding($true)
+$ascii = New-Object Text.ASCIIEncoding
+Get-ChildItem -LiteralPath $stageDir -Recurse -File -Filter '*.ps1' | ForEach-Object {
+  $content = [IO.File]::ReadAllText($_.FullName, [Text.Encoding]::UTF8)
+  $content = ($content -replace "\r?\n", "`r`n").TrimEnd("`r", "`n") + "`r`n"
+  [IO.File]::WriteAllText($_.FullName, $content, $utf8Bom)
+}
+Get-ChildItem -LiteralPath $stageDir -Recurse -File -Filter '*.cmd' | ForEach-Object {
+  $content = [IO.File]::ReadAllText($_.FullName, [Text.Encoding]::UTF8)
+  if ($content -match '[^\u0000-\u007f]') {
+    throw "CMD launcher must contain ASCII only: $($_.FullName)"
+  }
+  $content = ($content -replace "\r?\n", "`r`n").TrimEnd("`r", "`n") + "`r`n"
+  [IO.File]::WriteAllText($_.FullName, $content, $ascii)
+}
 
 Compress-Archive -Path (Join-Path $stageDir '*') -DestinationPath $archivePath -CompressionLevel Optimal
 Remove-Item -LiteralPath $stageDir -Recurse -Force
