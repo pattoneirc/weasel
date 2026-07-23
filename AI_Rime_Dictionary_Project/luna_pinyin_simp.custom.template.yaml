@@ -1,0 +1,27 @@
+# 新安装且没有其他自定义配置时，可直接复制为 luna_pinyin_simp.custom.yaml。
+# 已有自定义配置时请使用 scripts/install.ps1 合并，避免覆盖原设置。
+__patch:
+  - patch/+:
+      schema/dependencies:
+        - stroke
+        - ai_creator
+      engine/translators:
+        - punct_translator
+        - table_translator@custom_phrase
+        - reverse_lookup_translator
+        - script_translator
+        - table_translator@ai_creator
+        - table_translator@ai_shortcuts
+      ai_creator:
+        dictionary: ai_creator
+        enable_completion: false
+        enable_sentence: false
+        enable_user_dict: true
+        initial_quality: -2.0
+        comment_format:
+          - xform/.+//
+      ai_shortcuts:
+        __include: ai_shortcuts:/translator
+      "recognizer/patterns/ai_shortcut":
+        __include: ai_shortcuts:/pattern
+      "punctuator/import_preset": ai_punctuation

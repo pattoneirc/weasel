@@ -1,0 +1,28 @@
+# 可合并到 luna_pinyin_simp.custom.yaml 的混输配置。
+# encoding: utf-8
+---
+__patch:
+  - patch/+:
+      schema/dependencies:
+        - stroke
+        - ai_creator
+      engine/translators:
+        - punct_translator
+        - table_translator@custom_phrase
+        - reverse_lookup_translator
+        - script_translator
+        - table_translator@ai_creator
+        - table_translator@ai_shortcuts
+      ai_creator:
+        dictionary: ai_creator
+        enable_completion: false
+        enable_sentence: false
+        enable_user_dict: true
+        initial_quality: -2.0
+        comment_format:
+          - xform/.+//
+      ai_shortcuts:
+        __include: ai_shortcuts:/translator
+      "recognizer/patterns/ai_shortcut":
+        __include: ai_shortcuts:/pattern
+      "punctuator/import_preset": ai_punctuation

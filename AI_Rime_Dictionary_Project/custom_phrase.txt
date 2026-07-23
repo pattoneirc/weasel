@@ -1,0 +1,10 @@
+# 用户可自行扩展的高优先级短语。格式：候选<Tab>编码<Tab>权重
+ComfyUI	comfyui	100
+Wan2.1	wan21	100
+Wan2.2	wan22	100
+Unreal Engine 5	ue5	100
+cinematic lighting	cgl	100
+subsurface scattering	sss	100
+3D CG render	3dcg	100
+image to video	i2v	100
+text to video	t2v	100
